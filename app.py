@@ -1,0 +1,1 @@
+print("Hello, Go Training Management System!")
