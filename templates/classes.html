@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>班级管理</title>
+
+    <style>
+        body {
+            background-color: #f0f4f8;
+            font-family: "Microsoft YaHei", sans-serif;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #2c3e50;
+        }
+
+        .card {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0 20px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #2c3e50;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #1a252f;
+        }
+
+        .back-link {
+            color: #2c3e50;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>班级管理</h1>
+
+        <div class="card">
+            <h2>创建班级</h2>
+
+            <form method="POST" action="/classes">
+
+                <label for="name">班级名称：</label>
+                <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    required
+                >
+
+                <label for="description">班级说明：</label>
+                <textarea
+                    id="description"
+                    name="description"
+                    rows="3"
+                ></textarea>
+
+                <button type="submit">创建班级</button>
+            </form>
+        </div>
+
+        <a class="back-link" href="{{ url_for('home') }}">
+            ← 返回首页
+        </a>
+    </div>
+</body>
+</html>

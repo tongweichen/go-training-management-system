@@ -95,6 +95,31 @@ def edit_student(student_id):
 
     return render_template("edit_student.html", student=student)
 
+@app.route("/classes", methods=["GET", "POST"])
+def classes():
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        description = request.form.get("description", "").strip()
+
+        if not name:
+            return "Class name is required", 400
+
+        connection = sqlite3.connect("go_training.db")
+
+        cursor = connection.cursor()
+
+        cursor.execute(
+            "INSERT INTO classes (name, description) VALUES (?, ?)",
+            (name, description)
+        )
+
+        connection.commit()
+        connection.close()
+
+        return redirect(url_for("classes"))
+
+    return render_template("classes.html")
 
 # Run the Flask application
 if __name__ == "__main__":
