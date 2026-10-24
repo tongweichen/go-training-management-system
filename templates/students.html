@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生管理</title>
+
+    <style>
+        body {
+            background-color: #f0f4f8;
+            font-family: "Microsoft YaHei", sans-serif;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .card {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #2c3e50;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0 20px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #2c3e50;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #1a252f;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f0f4f8;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .empty-message {
+            color: #777;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>学生管理</h1>
+
+        <!-- 添加学生 -->
+        <div class="card">
+            <h2>添加学生</h2>
+
+            <form method="POST" action="/students">
+
+                <label for="name">学生姓名：</label>
+                <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    required
+                >
+
+                <label for="phone">联系电话：</label>
+                <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                >
+
+                <button type="submit">添加学生</button>
+
+            </form>
+        </div>
+
+        <!-- 学生名单 -->
+        <div class="card">
+            <h2>学生名单</h2>
+
+            {% if students %}
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>编号</th>
+                            <th>姓名</th>
+                            <th>联系电话</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for student in students %}
+                        <tr>
+                            <td>{{ student.id }}</td>
+                            <td>{{ student.name }}</td>
+                            <td>{{ student.phone or "未填写" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% else %}
+
+            <p class="empty-message">暂无学生信息</p>
+
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
