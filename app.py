@@ -121,6 +121,65 @@ def classes():
 
     return render_template("classes.html")
 
+    # Student Enrollment
+@app.route("/enrollments", methods=["GET", "POST"])
+def enrollments():
+
+    connection = sqlite3.connect("go_training.db")
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
+
+    cursor = connection.cursor()
+
+    # Save student enrollment
+    if request.method == "POST":
+
+        student_id = request.form.get("student_id", type=int)
+        class_id = request.form.get("class_id", type=int)
+
+        if student_id is None or class_id is None:
+            connection.close()
+            return "Please select a student and a class", 400
+
+        try:
+            cursor.execute(
+                """
+                INSERT INTO enrollments (student_id, class_id)
+                VALUES (?, ?)
+                """,
+                (student_id, class_id)
+            )
+
+            connection.commit()
+
+        except sqlite3.IntegrityError:
+            connection.rollback()
+            connection.close()
+            return "Student already enrolled or invalid selection", 400
+
+        connection.close()
+
+        return redirect(url_for("enrollments"))
+
+    # Read student list
+    cursor.execute(
+        "SELECT id, name FROM students ORDER BY name"
+    )
+    student_list = cursor.fetchall()
+
+    # Read class list
+    cursor.execute(
+        "SELECT id, name FROM classes ORDER BY name"
+    )
+    class_list = cursor.fetchall()
+
+    connection.close()
+
+    return render_template(
+        "enrollments.html",
+        students=student_list,
+        classes=class_list
+    )
 # Run the Flask application
 if __name__ == "__main__":
     app.run(debug=True)
