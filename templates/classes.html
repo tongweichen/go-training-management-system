@@ -53,6 +53,38 @@
         .back-link {
             color: #2c3e50;
         }
+
+        .class-item {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .class-item:last-child {
+            border-bottom: none;
+        }
+
+        .class-item h3 {
+            margin-bottom: 5px;
+        }
+
+        .class-item h3 a {
+            color: #2c3e50;
+            text-decoration: none;
+        }
+
+        .class-item h3 a:hover {
+            text-decoration: underline;
+        }
+
+        .class-item p {
+            color: #666;
+        }
+
+        .empty-message {
+            color: #777;
+            text-align: center;
+            padding: 20px;
+        }
     </style>
 </head>
 
@@ -60,6 +92,7 @@
     <div class="container">
         <h1>班级管理</h1>
 
+        <!-- Create Class -->
         <div class="card">
             <h2>创建班级</h2>
 
@@ -82,6 +115,37 @@
 
                 <button type="submit">创建班级</button>
             </form>
+        </div>
+
+        <!-- Class List -->
+        <div class="card">
+            <h2>班级名单</h2>
+
+            {% if classes %}
+
+                {% for class_item in classes %}
+
+                <div class="class-item">
+                    <h3>
+                        <a href="{{ url_for('class_detail', class_id=class_item.id) }}">
+                            {{ class_item.name }}
+                        </a>
+                    </h3>
+
+                    <p>
+                        {{ class_item.description or "暂无班级说明" }}
+                    </p>
+                </div>
+
+                {% endfor %}
+
+            {% else %}
+
+                <p class="empty-message">
+                    暂无班级信息
+                </p>
+
+            {% endif %}
         </div>
 
         <a class="back-link" href="{{ url_for('home') }}">

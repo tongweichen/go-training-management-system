@@ -35,7 +35,7 @@ def students():
 
         return redirect(url_for("students"))
 
-    # Read all students from database
+    # Read all students
     connection = sqlite3.connect("go_training.db")
     connection.row_factory = sqlite3.Row
 
@@ -80,7 +80,7 @@ def edit_student(student_id):
 
         return redirect(url_for("students"))
 
-    # Get the current student's information
+    # Get student information
     cursor.execute(
         "SELECT id, name, phone FROM students WHERE id = ?",
         (student_id,)
@@ -95,9 +95,12 @@ def edit_student(student_id):
 
     return render_template("edit_student.html", student=student)
 
+
+# Class Management - Add and View Classes
 @app.route("/classes", methods=["GET", "POST"])
 def classes():
 
+    # Create a new class
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         description = request.form.get("description", "").strip()
@@ -106,7 +109,6 @@ def classes():
             return "Class name is required", 400
 
         connection = sqlite3.connect("go_training.db")
-
         cursor = connection.cursor()
 
         cursor.execute(
@@ -119,9 +121,24 @@ def classes():
 
         return redirect(url_for("classes"))
 
-    return render_template("classes.html")
+    # Read all classes
+    connection = sqlite3.connect("go_training.db")
+    connection.row_factory = sqlite3.Row
 
-    # Student Enrollment
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "SELECT id, name, description FROM classes ORDER BY id DESC"
+    )
+
+    class_list = cursor.fetchall()
+
+    connection.close()
+
+    return render_template("classes.html", classes=class_list)
+
+
+# Student Enrollment
 @app.route("/enrollments", methods=["GET", "POST"])
 def enrollments():
 
@@ -161,13 +178,13 @@ def enrollments():
 
         return redirect(url_for("enrollments"))
 
-    # Read student list
+    # Read students
     cursor.execute(
         "SELECT id, name FROM students ORDER BY name"
     )
     student_list = cursor.fetchall()
 
-    # Read class list
+    # Read classes
     cursor.execute(
         "SELECT id, name FROM classes ORDER BY name"
     )
@@ -180,6 +197,84 @@ def enrollments():
         students=student_list,
         classes=class_list
     )
+
+
+# Class Detail - View Enrolled Students
+@app.route("/classes/<int:class_id>")
+def class_detail(class_id):
+
+    connection = sqlite3.connect("go_training.db")
+    connection.row_factory = sqlite3.Row
+
+    cursor = connection.cursor()
+
+    # Get class information
+    cursor.execute(
+        "SELECT id, name, description FROM classes WHERE id = ?",
+        (class_id,)
+    )
+
+    class_info = cursor.fetchone()
+
+    if class_info is None:
+        connection.close()
+        return "Class not found", 404
+
+    # Get active students in the selected class
+    cursor.execute(
+        """
+        SELECT students.id, students.name, students.phone
+        FROM students
+        JOIN enrollments
+            ON students.id = enrollments.student_id
+        WHERE enrollments.class_id = ?
+          AND enrollments.status = 'active'
+        ORDER BY students.name
+        """,
+        (class_id,)
+    )
+
+    student_list = cursor.fetchall()
+
+    connection.close()
+
+    return render_template(
+        "class_detail.html",
+        class_info=class_info,
+        students=student_list
+    )
+
+
+# Student Leaves a Class
+@app.route(
+    "/classes/<int:class_id>/leave/<int:student_id>",
+    methods=["POST"]
+)
+def leave_class(class_id, student_id):
+
+    connection = sqlite3.connect("go_training.db")
+    connection.execute("PRAGMA foreign_keys = ON")
+
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        UPDATE enrollments
+        SET status = 'ended',
+            end_date = DATE('now')
+        WHERE student_id = ?
+          AND class_id = ?
+          AND status = 'active'
+        """,
+        (student_id, class_id)
+    )
+
+    connection.commit()
+    connection.close()
+
+    return redirect(url_for("class_detail", class_id=class_id))
+
+
 # Run the Flask application
 if __name__ == "__main__":
     app.run(debug=True)
