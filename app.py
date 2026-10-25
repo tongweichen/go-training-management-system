@@ -1,4 +1,3 @@
-
 import sqlite3
 from flask import Flask, render_template, request, redirect, url_for
 
@@ -80,24 +79,62 @@ def students():
 
         student_classes[student_id].append(class_name)
 
+    # Get all available classes
     cursor.execute(
         """
-        SELLECT id,name
+        SELECT id, name
         FROM classes
         ORDER BY name
         """
     )
 
-    all_classses=cursor.fetchall()
+    all_classes = cursor.fetchall()
 
     connection.close()
 
     return render_template(
         "students.html",
-        students=students_list,
+        students=student_list,
         student_classes=student_classes,
         all_classes=all_classes
     )
+
+
+# Assign a Student to a Class
+@app.route(
+    "/students/<int:student_id>/assign",
+    methods=["POST"]
+)
+def assign_student(student_id):
+
+    class_id = request.form.get("class_id", type=int)
+
+    if class_id is None:
+        return "Please select a class", 400
+
+    connection = sqlite3.connect("go_training.db")
+    connection.execute("PRAGMA foreign_keys = ON")
+
+    try:
+        connection.execute(
+            """
+            INSERT INTO enrollments
+                (student_id, class_id, start_date, status)
+            VALUES (?, ?, DATE('now'), 'active')
+            """,
+            (student_id, class_id)
+        )
+
+        connection.commit()
+
+    except sqlite3.IntegrityError:
+        connection.rollback()
+        return "Student is already in this class or the selection is invalid", 400
+
+    finally:
+        connection.close()
+
+    return redirect(url_for("students"))
 
 
 # Edit Student Information

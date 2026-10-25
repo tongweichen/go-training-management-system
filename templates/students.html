@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -14,7 +13,7 @@
         }
 
         .container {
-            max-width: 700px;
+            max-width: 900px;
             margin: 40px auto;
             padding: 20px;
         }
@@ -94,6 +93,24 @@
             white-space: nowrap;
         }
 
+        .assign-form {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .assign-form select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            min-width: 110px;
+        }
+
+        .assign-form button {
+            padding: 8px 12px;
+            white-space: nowrap;
+        }
+
         .edit-link {
             color: #2c3e50;
             text-decoration: none;
@@ -155,6 +172,7 @@
                             <th>姓名</th>
                             <th>联系电话</th>
                             <th>所属班级</th>
+                            <th>分班</th>
                             <th>操作</th>
                         </tr>
                     </thead>
@@ -191,6 +209,38 @@
                             </td>
 
                             <td>
+                                {% if all_classes %}
+                                <form
+                                    method="POST"
+                                    action="{{ url_for('assign_student', student_id=student.id) }}"
+                                    class="assign-form"
+                                >
+                                    <select
+                                        name="class_id"
+                                        aria-label="为 {{ student.name }} 选择班级"
+                                        required
+                                    >
+                                        <option value="">选择班级</option>
+
+                                        {% for class_item in all_classes %}
+                                        <option value="{{ class_item.id }}">
+                                            {{ class_item.name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+
+                                    <button type="submit">
+                                        保存
+                                    </button>
+                                </form>
+                                {% else %}
+                                <span class="unassigned-badge">
+                                    暂无班级
+                                </span>
+                                {% endif %}
+                            </td>
+
+                            <td>
                                 <a
                                     class="edit-link"
                                     href="{{ url_for('edit_student', student_id=student.id) }}"
@@ -210,6 +260,10 @@
 
             {% endif %}
         </div>
+
+        <a class="edit-link" href="{{ url_for('home') }}">
+            ← 返回首页
+        </a>
 
     </div>
 </body>
