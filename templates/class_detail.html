@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>班级详情</title>
+
+    <style>
+        body {
+            background-color: #f0f4f8;
+            font-family: "Microsoft YaHei", sans-serif;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #2c3e50;
+        }
+
+        .card {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .student-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            padding: 15px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .student-item:last-child {
+            border-bottom: none;
+        }
+
+        .student-info {
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .student-info p {
+            color: #666;
+            margin-bottom: 0;
+        }
+
+        .leave-button {
+            background-color: #c0392b;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .leave-button:hover {
+            background-color: #922b21;
+        }
+
+        .back-link {
+            color: #2c3e50;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .empty-message {
+            color: #777;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <h1>{{ class_info.name }}</h1>
+
+        <!-- Class Information -->
+        <div class="card">
+            <h2>班级信息</h2>
+
+            <p>
+                {{ class_info.description or "暂无班级说明" }}
+            </p>
+        </div>
+
+        <!-- Active Students -->
+        <div class="card">
+            <h2>当前班级学生</h2>
+
+            {% if students %}
+
+                {% for student in students %}
+
+                <div class="student-item">
+
+                    <div class="student-info">
+                        <strong>{{ student.name }}</strong>
+                        <p>
+                            联系电话：
+                            {{ student.phone or "未填写" }}
+                        </p>
+                    </div>
+
+                    <form
+                        method="POST"
+                        action="{{ url_for('leave_class', class_id=class_info.id, student_id=student.id) }}"
+                        onsubmit="return confirm('确定要让这名学生退出当前班级吗？历史记录将会保留。');"
+                    >
+                        <button
+                            type="submit"
+                            class="leave-button"
+                        >
+                            退出班级
+                        </button>
+                    </form>
+
+                </div>
+
+                {% endfor %}
+
+            {% else %}
+
+                <p class="empty-message">
+                    当前班级暂无学生
+                </p>
+
+            {% endif %}
+
+        </div>
+
+        <a
+            class="back-link"
+            href="{{ url_for('classes') }}"
+        >
+            ← 返回班级管理
+        </a>
+
+    </div>
+</body>
+</html>
