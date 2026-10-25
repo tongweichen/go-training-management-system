@@ -1,3 +1,4 @@
+
 import sqlite3
 from flask import Flask, render_template, request, redirect, url_for
 
@@ -182,12 +183,14 @@ def enrollments():
     cursor.execute(
         "SELECT id, name FROM students ORDER BY name"
     )
+
     student_list = cursor.fetchall()
 
     # Read classes
     cursor.execute(
         "SELECT id, name FROM classes ORDER BY name"
     )
+
     class_list = cursor.fetchall()
 
     connection.close()
@@ -236,12 +239,26 @@ def class_detail(class_id):
 
     student_list = cursor.fetchall()
 
+    # Get other classes for student transfers
+    cursor.execute(
+        """
+        SELECT id, name
+        FROM classes
+        WHERE id != ?
+        ORDER BY name
+        """,
+        (class_id,)
+    )
+
+    other_classes = cursor.fetchall()
+
     connection.close()
 
     return render_template(
         "class_detail.html",
         class_info=class_info,
-        students=student_list
+        students=student_list,
+        other_classes=other_classes
     )
 
 
@@ -275,6 +292,85 @@ def leave_class(class_id, student_id):
     return redirect(url_for("class_detail", class_id=class_id))
 
 
-# Run the Flask application
+# Transfer a Student to Another Class
+@app.route(
+    "/classes/<int:class_id>/transfer/<int:student_id>",
+    methods=["POST"]
+)
+def transfer_student(class_id, student_id):
+
+    new_class_id = request.form.get("new_class_id", type=int)
+
+    if new_class_id is None or new_class_id == class_id:
+        return "Please select a different class", 400
+
+    connection = sqlite3.connect("go_training.db")
+    connection.execute("PRAGMA foreign_keys = ON")
+
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+
+        # Check that the student is currently enrolled
+        current = connection.execute(
+            """
+            SELECT id FROM enrollments
+            WHERE student_id = ?
+              AND class_id = ?
+              AND status = 'active'
+            """,
+            (student_id, class_id)
+        ).fetchone()
+
+        if current is None:
+            connection.rollback()
+            return "Active enrollment not found", 404
+
+        # Check that the destination class exists
+        destination = connection.execute(
+            "SELECT id FROM classes WHERE id = ?",
+            (new_class_id,)
+        ).fetchone()
+
+        if destination is None:
+            connection.rollback()
+            return "Destination class not found", 404
+
+        # End the previous enrollment
+        connection.execute(
+            """
+            UPDATE enrollments
+            SET status = 'ended',
+                end_date = DATE('now')
+            WHERE id = ?
+            """,
+            (current[0],)
+        )
+
+        # Create a new enrollment
+        connection.execute(
+            """
+            INSERT INTO enrollments
+                (student_id, class_id, start_date, status, notes)
+            VALUES (
+                ?, ?, DATE('now'), 'active',
+                'Transferred from another class'
+            )
+            """,
+            (student_id, new_class_id)
+        )
+
+        connection.commit()
+
+    except sqlite3.IntegrityError:
+        connection.rollback()
+        return "Student is already enrolled in the destination class", 400
+
+    finally:
+        connection.close()
+
+    return redirect(url_for("class_detail", class_id=new_class_id))
+
+
+# Run the Flask Application
 if __name__ == "__main__":
     app.run(debug=True)
