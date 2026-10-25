@@ -43,14 +43,50 @@ def students():
     cursor = connection.cursor()
 
     cursor.execute(
-        "SELECT id, name, phone FROM students ORDER BY id DESC"
+        """
+        SELECT id, name, phone
+        FROM students
+        ORDER BY id DESC
+        """
     )
 
     student_list = cursor.fetchall()
 
+    # Get current classes for all students
+    cursor.execute(
+        """
+        SELECT
+            enrollments.student_id,
+            classes.name AS class_name
+        FROM enrollments
+        JOIN classes
+            ON enrollments.class_id = classes.id
+        WHERE enrollments.status = 'active'
+        ORDER BY classes.name
+        """
+    )
+
+    enrollment_list = cursor.fetchall()
+
+    # Group class names by student ID
+    student_classes = {}
+
+    for enrollment in enrollment_list:
+        student_id = enrollment["student_id"]
+        class_name = enrollment["class_name"]
+
+        if student_id not in student_classes:
+            student_classes[student_id] = []
+
+        student_classes[student_id].append(class_name)
+
     connection.close()
 
-    return render_template("students.html", students=student_list)
+    return render_template(
+        "students.html",
+        students=student_list,
+        student_classes=student_classes
+    )
 
 
 # Edit Student Information

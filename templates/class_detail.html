@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -53,6 +54,37 @@
             margin-bottom: 0;
         }
 
+        .student-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .student-actions form {
+            margin: 0;
+        }
+
+        select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            max-width: 100%;
+        }
+
+        .transfer-button {
+            background-color: #2c3e50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .transfer-button:hover {
+            background-color: #1a252f;
+        }
+
         .leave-button {
             background-color: #c0392b;
             color: white;
@@ -79,6 +111,26 @@
             color: #777;
             text-align: center;
             padding: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .student-item {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .student-actions {
+                align-items: stretch;
+            }
+
+            .student-actions form {
+                width: 100%;
+            }
+
+            .student-actions select {
+                width: 100%;
+                margin-bottom: 8px;
+            }
         }
     </style>
 </head>
@@ -115,18 +167,45 @@
                         </p>
                     </div>
 
-                    <form
-                        method="POST"
-                        action="{{ url_for('leave_class', class_id=class_info.id, student_id=student.id) }}"
-                        onsubmit="return confirm('确定要让这名学生退出当前班级吗？历史记录将会保留。');"
-                    >
-                        <button
-                            type="submit"
-                            class="leave-button"
+                    <div class="student-actions">
+
+                        <!-- Student Transfer -->
+                        {% if other_classes %}
+
+                        <form
+                            method="POST"
+                            action="{{ url_for('transfer_student', class_id=class_info.id, student_id=student.id) }}"
+                            onsubmit="return confirm('确定要将这名学生转到所选班级吗？');"
                         >
-                            退出班级
-                        </button>
-                    </form>
+                            <select name="new_class_id" required>
+                                <option value="">选择目标班级</option>
+
+                                {% for class_item in other_classes %}
+                                <option value="{{ class_item.id }}">
+                                    {{ class_item.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+
+                            <button type="submit" class="transfer-button">
+                                确认转班
+                            </button>
+                        </form>
+
+                        {% endif %}
+
+                        <!-- Student Leaves Class -->
+                        <form
+                            method="POST"
+                            action="{{ url_for('leave_class', class_id=class_info.id, student_id=student.id) }}"
+                            onsubmit="return confirm('确定要让这名学生退出当前班级吗？历史记录将会保留。');"
+                        >
+                            <button type="submit" class="leave-button">
+                                退出班级
+                            </button>
+                        </form>
+
+                    </div>
 
                 </div>
 
@@ -142,10 +221,7 @@
 
         </div>
 
-        <a
-            class="back-link"
-            href="{{ url_for('classes') }}"
-        >
+        <a class="back-link" href="{{ url_for('classes') }}">
             ← 返回班级管理
         </a>
 
