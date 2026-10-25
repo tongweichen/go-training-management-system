@@ -80,12 +80,23 @@ def students():
 
         student_classes[student_id].append(class_name)
 
+    cursor.execute(
+        """
+        SELLECT id,name
+        FROM classes
+        ORDER BY name
+        """
+    )
+
+    all_classses=cursor.fetchall()
+
     connection.close()
 
     return render_template(
         "students.html",
-        students=student_list,
-        student_classes=student_classes
+        students=students_list,
+        student_classes=student_classes,
+        all_classes=all_classes
     )
 
 
