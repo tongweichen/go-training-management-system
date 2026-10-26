@@ -163,6 +163,12 @@
                     <p>
                         {{ class_item.description or "暂无班级说明" }}
                     </p>
+                    <a
+                        class="back-link"
+                        href="{{ url_for('edit_class', class_id=class_item.id) }}"
+                    >
+                        编辑班级
+                    </a>
                 </div>
 
                 {% endfor %}

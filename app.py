@@ -607,6 +607,54 @@ def update_student_status(student_id):
 
     return redirect(url_for("students"))
 
+# Edit Class Information
+@app.route("/classes/<int:class_id>/edit", methods=["GET", "POST"])
+def edit_class(class_id):
+
+    connection = sqlite3.connect("go_training.db")
+    connection.row_factory = sqlite3.Row
+
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "SELECT id, name, description FROM classes WHERE id = ?",
+        (class_id,)
+    )
+
+    class_info = cursor.fetchone()
+
+    if class_info is None:
+        connection.close()
+        return "Class not found", 404
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        description = request.form.get("description", "").strip()
+
+        if not name:
+            connection.close()
+            return "Class name is required", 400
+
+        cursor.execute(
+            """
+            UPDATE classes
+            SET name = ?, description = ?
+            WHERE id = ?
+            """,
+            (name, description, class_id)
+        )
+
+        connection.commit()
+        connection.close()
+
+        return redirect(url_for("classes"))
+
+    connection.close()
+
+    return render_template(
+        "edit_class.html",
+        class_info=class_info
+    )
 
 # Run the Flask Application
 if __name__ == "__main__":
