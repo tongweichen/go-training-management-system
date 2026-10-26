@@ -43,7 +43,7 @@ def students():
 
     cursor.execute(
         """
-        SELECT id, name, phone
+        SELECT id, name, phone, status
         FROM students
         ORDER BY id DESC
         """
@@ -56,6 +56,7 @@ def students():
         """
         SELECT
             enrollments.student_id,
+            classes.id AS class_id,
             classes.name AS class_name
         FROM enrollments
         JOIN classes
@@ -67,17 +68,19 @@ def students():
 
     enrollment_list = cursor.fetchall()
 
-    # Group class names by student ID
+    # Group classes by student ID
     student_classes = {}
 
     for enrollment in enrollment_list:
         student_id = enrollment["student_id"]
-        class_name = enrollment["class_name"]
 
         if student_id not in student_classes:
             student_classes[student_id] = []
 
-        student_classes[student_id].append(class_name)
+        student_classes[student_id].append({
+            "id": enrollment["class_id"],
+            "name": enrollment["class_name"]
+        })
 
     # Get all available classes
     cursor.execute(
@@ -453,6 +456,156 @@ def transfer_student(class_id, student_id):
         connection.close()
 
     return redirect(url_for("class_detail", class_id=new_class_id))
+
+# Remove a student from a class on the student list
+@app.route(
+    "/students/<int:student_id>/leave/<int:class_id>",
+    methods=["POST"]
+)
+def leave_student_class(student_id, class_id):
+
+    connection = sqlite3.connect("go_training.db")
+
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        UPDATE enrollments
+        SET status = 'ended',
+            end_date = DATE('now')
+        WHERE student_id = ?
+          AND class_id = ?
+          AND status = 'active'
+        """,
+        (student_id, class_id)
+    )
+
+    connection.commit()
+    connection.close()
+
+    return redirect(url_for("students"))
+
+
+# Update Student Class or Status
+@app.route(
+    "/students/<int:student_id>/update-status",
+    methods=["POST"]
+)
+def update_student_status(student_id):
+
+    selection = request.form.get("selection", "").strip()
+
+    if not selection:
+        return "Please select a class or status", 400
+
+    connection = sqlite3.connect("go_training.db")
+    connection.execute("PRAGMA foreign_keys = ON")
+
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+
+        student = connection.execute(
+            "SELECT id FROM students WHERE id = ?",
+            (student_id,)
+        ).fetchone()
+
+        if student is None:
+            connection.rollback()
+            return "Student not found", 404
+
+        if selection not in ("unassigned", "withdrawn"):
+            try:
+                class_id = int(selection)
+            except ValueError:
+                connection.rollback()
+                return "Invalid class selection", 400
+
+            destination = connection.execute(
+                "SELECT id FROM classes WHERE id = ?",
+                (class_id,)
+            ).fetchone()
+
+            if destination is None:
+                connection.rollback()
+                return "Class not found", 404
+
+            existing = connection.execute(
+                """
+                SELECT id FROM enrollments
+                WHERE student_id = ?
+                  AND class_id = ?
+                  AND status = 'active'
+                """,
+                (student_id, class_id)
+            ).fetchone()
+        else:
+            class_id = None
+            existing = None
+
+        # End other active enrollments
+        if class_id is None:
+            connection.execute(
+                """
+                UPDATE enrollments
+                SET status = 'ended',
+                    end_date = DATE('now')
+                WHERE student_id = ?
+                  AND status = 'active'
+                """,
+                (student_id,)
+            )
+        else:
+            connection.execute(
+                """
+                UPDATE enrollments
+                SET status = 'ended',
+                    end_date = DATE('now')
+                WHERE student_id = ?
+                  AND class_id != ?
+                  AND status = 'active'
+                """,
+                (student_id, class_id)
+            )
+
+        if selection == "withdrawn":
+            connection.execute(
+                """
+                UPDATE students
+                SET status = 'withdrawn'
+                WHERE id = ?
+                """,
+                (student_id,)
+            )
+        else:
+            connection.execute(
+                """
+                UPDATE students
+                SET status = 'active'
+                WHERE id = ?
+                """,
+                (student_id,)
+            )
+
+            if class_id is not None and existing is None:
+                connection.execute(
+                    """
+                    INSERT INTO enrollments
+                        (student_id, class_id, start_date, status)
+                    VALUES (?, ?, DATE('now'), 'active')
+                    """,
+                    (student_id, class_id)
+                )
+
+        connection.commit()
+
+    except sqlite3.Error:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+    return redirect(url_for("students"))
 
 
 # Run the Flask Application

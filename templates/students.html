@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -70,19 +71,19 @@
             overflow-x: auto;
         }
 
-        .class-badge {
+        .class-tag {
             display: inline-block;
             background-color: #e6f4ea;
             color: #237a45;
             border: 1px solid #b9dfc5;
             border-radius: 5px;
-            padding: 5px 9px;
+            padding: 5px 8px;
             margin: 3px 3px 3px 0;
             font-size: 13px;
             white-space: nowrap;
         }
 
-        .unassigned-badge {
+        .status-tag {
             display: inline-block;
             background-color: #f1f3f5;
             color: #777;
@@ -93,20 +94,20 @@
             white-space: nowrap;
         }
 
-        .assign-form {
+        .status-form {
             display: flex;
             gap: 8px;
             align-items: center;
         }
 
-        .assign-form select {
+        .status-form select {
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 5px;
-            min-width: 110px;
+            min-width: 120px;
         }
 
-        .assign-form button {
+        .status-form button {
             padding: 8px 12px;
             white-space: nowrap;
         }
@@ -154,7 +155,9 @@
                     name="phone"
                 >
 
-                <button type="submit">添加学生</button>
+                <button type="submit">
+                    添加学生
+                </button>
             </form>
         </div>
 
@@ -171,14 +174,15 @@
                             <th>编号</th>
                             <th>姓名</th>
                             <th>联系电话</th>
-                            <th>所属班级</th>
-                            <th>分班</th>
+                            <th>当前状态</th>
+                            <th>修改班级／状态</th>
                             <th>操作</th>
                         </tr>
                     </thead>
 
                     <tbody>
                         {% for student in students %}
+
                         <tr>
                             <td>{{ student.id }}</td>
 
@@ -189,19 +193,25 @@
                             </td>
 
                             <td>
-                                {% set classes = student_classes.get(student.id, []) %}
+                                {% set current_classes = student_classes.get(student.id, []) %}
 
-                                {% if classes %}
+                                {% if student.status == "withdrawn" %}
 
-                                    {% for class_name in classes %}
-                                    <span class="class-badge">
-                                        {{ class_name }}
+                                    <span class="status-tag">
+                                        已退学
+                                    </span>
+
+                                {% elif current_classes %}
+
+                                    {% for class_item in current_classes %}
+                                    <span class="class-tag">
+                                        {{ class_item.name }}
                                     </span>
                                     {% endfor %}
 
                                 {% else %}
 
-                                    <span class="unassigned-badge">
+                                    <span class="status-tag">
                                         未分班
                                     </span>
 
@@ -209,18 +219,27 @@
                             </td>
 
                             <td>
-                                {% if all_classes %}
                                 <form
                                     method="POST"
-                                    action="{{ url_for('assign_student', student_id=student.id) }}"
-                                    class="assign-form"
+                                    action="{{ url_for('update_student_status', student_id=student.id) }}"
+                                    class="status-form"
                                 >
                                     <select
-                                        name="class_id"
-                                        aria-label="为 {{ student.name }} 选择班级"
+                                        name="selection"
+                                        aria-label="修改 {{ student.name }} 的班级或状态"
                                         required
                                     >
-                                        <option value="">选择班级</option>
+                                        <option value="">
+                                            请选择
+                                        </option>
+
+                                        <option value="unassigned">
+                                            未分班
+                                        </option>
+
+                                        <option value="withdrawn">
+                                            已退学
+                                        </option>
 
                                         {% for class_item in all_classes %}
                                         <option value="{{ class_item.id }}">
@@ -233,11 +252,6 @@
                                         保存
                                     </button>
                                 </form>
-                                {% else %}
-                                <span class="unassigned-badge">
-                                    暂无班级
-                                </span>
-                                {% endif %}
                             </td>
 
                             <td>
@@ -249,6 +263,7 @@
                                 </a>
                             </td>
                         </tr>
+
                         {% endfor %}
                     </tbody>
                 </table>
@@ -256,7 +271,9 @@
 
             {% else %}
 
-            <p class="empty-message">暂无学生信息</p>
+            <p class="empty-message">
+                暂无学生信息
+            </p>
 
             {% endif %}
         </div>
