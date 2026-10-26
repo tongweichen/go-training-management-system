@@ -81,6 +81,14 @@
                     value="{{ student.phone or '' }}"
                 >
 
+                <label for="birthday">出生日期：</label>
+                <input
+                    type="date"
+                    id="birthday"
+                    name="birthday"
+                    value="{{ student.birthday or '' }}"
+                >
+
                 <button type="submit">保存修改</button>
             </form>
         </div>

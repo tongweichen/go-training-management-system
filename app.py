@@ -18,6 +18,7 @@ def students():
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         phone = request.form.get("phone", "").strip()
+        birthday = request.form.get("birthday", "").strip()
 
         if not name:
             return "Student name is required", 400
@@ -26,8 +27,8 @@ def students():
         cursor = connection.cursor()
 
         cursor.execute(
-            "INSERT INTO students (name, phone) VALUES (?, ?)",
-            (name, phone)
+            "INSERT INTO students (name, phone, birthday) VALUES (?, ?, ?)",
+            (name, phone, birthday or None)
         )
 
         connection.commit()
@@ -43,7 +44,7 @@ def students():
 
     cursor.execute(
         """
-        SELECT id, name, phone, status
+        SELECT id, name, phone, birthday, status
         FROM students
         ORDER BY id DESC
         """
@@ -153,14 +154,15 @@ def edit_student(student_id):
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         phone = request.form.get("phone", "").strip()
+        birthday = request.form.get("birthday", "").strip()
 
         if not name:
             connection.close()
             return "Student name is required", 400
 
         cursor.execute(
-            "UPDATE students SET name = ?, phone = ? WHERE id = ?",
-            (name, phone, student_id)
+            "UPDATE students SET name = ?, phone = ?, birthday = ? WHERE id = ?",
+            (name, phone, birthday or None, student_id)
         )
 
         connection.commit()
@@ -170,7 +172,7 @@ def edit_student(student_id):
 
     # Get student information
     cursor.execute(
-        "SELECT id, name, phone FROM students WHERE id = ?",
+        "SELECT id, name, phone, birthday FROM students WHERE id = ?",
         (student_id,)
     )
 
