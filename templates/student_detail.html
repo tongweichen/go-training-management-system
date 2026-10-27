@@ -1,0 +1,248 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生详情</title>
+
+    <style>
+        body {
+            background-color: #f0f4f8;
+            font-family: "Microsoft YaHei", sans-serif;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .card {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        h1, h2 {
+            color: #2c3e50;
+        }
+
+        .info-row {
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            display: inline-block;
+            min-width: 110px;
+            color: #777;
+        }
+
+        .class-tag {
+            display: inline-block;
+            background-color: #e6f4ea;
+            color: #237a45;
+            border: 1px solid #b9dfc5;
+            border-radius: 5px;
+            padding: 5px 8px;
+            margin: 3px;
+            font-size: 13px;
+        }
+
+        .status-tag {
+            display: inline-block;
+            background-color: #f1f3f5;
+            color: #777;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 5px 9px;
+            font-size: 13px;
+        }
+
+        .edit-link {
+            display: inline-block;
+            color: #2c3e50;
+            text-decoration: none;
+        }
+
+        .edit-link:hover {
+            text-decoration: underline;
+        }
+
+        .edit-button {
+            display: inline-block;
+            background-color: #2c3e50;
+            color: white;
+            padding: 10px 16px;
+            border-radius: 5px;
+            text-decoration: none;
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f0f4f8;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .empty-message {
+            color: #777;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <h1>{{ student.name }} - 学生详情</h1>
+
+        <!-- Basic Information -->
+        <div class="card">
+            <h2>基本资料</h2>
+
+            <div class="info-row">
+                <span class="info-label">学生编号：</span>
+                {{ student.id }}
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">姓名：</span>
+                {{ student.name }}
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">联系电话：</span>
+                {{ student.phone or "未填写" }}
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">出生日期：</span>
+                {{ student.birthday or "未填写" }}
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">学校：</span>
+                {{ student.school or "未填写" }}
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">年级：</span>
+                {{ student.grade or "未填写" }}
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">入学日期：</span>
+                {{ student.enrollment_date or "未填写" }}
+            </div>
+
+            <a
+                class="edit-button"
+                href="{{ url_for('edit_student', student_id=student.id) }}"
+            >
+                编辑学生资料
+            </a>
+        </div>
+
+        <!-- Current Status -->
+        <div class="card">
+            <h2>当前状态</h2>
+
+            {% if student.status == "withdrawn" %}
+
+                <span class="status-tag">已退学</span>
+
+            {% elif current_classes %}
+
+                {% for class_item in current_classes %}
+                    <span class="class-tag">
+                        {{ class_item.class_name }}
+                    </span>
+                {% endfor %}
+
+            {% else %}
+
+                <span class="status-tag">未分班</span>
+
+            {% endif %}
+        </div>
+
+        <!-- Enrollment History -->
+        <div class="card">
+            <h2>分班历史</h2>
+
+            {% if enrollment_history %}
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>班级名称</th>
+                                <th>开始日期</th>
+                                <th>结束日期</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for enrollment in enrollment_history %}
+                            <tr>
+                                <td>{{ enrollment.class_name }}</td>
+
+                                <td>
+                                    {{ enrollment.start_date or "未记录" }}
+                                </td>
+
+                                <td>
+                                    {{ enrollment.end_date or "—" }}
+                                </td>
+
+                                <td>
+                                    {% if enrollment.status == "active" %}
+                                        <span class="class-tag">当前在班</span>
+                                    {% else %}
+                                        <span class="status-tag">已结束</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            {% else %}
+
+                <p class="empty-message">
+                    暂无分班记录
+                </p>
+
+            {% endif %}
+        </div>
+
+        <a class="edit-link" href="{{ url_for('students') }}">
+            ← 返回学生管理
+        </a>
+
+    </div>
+</body>
+</html>

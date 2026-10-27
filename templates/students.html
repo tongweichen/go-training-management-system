@@ -218,7 +218,14 @@
                         <tr>
                             <td>{{ student.id }}</td>
 
-                            <td>{{ student.name }}</td>
+                            <td>
+                                <a
+                                   class="edit-link"
+                                   href="{{ url_for('student_detail', student_id=student.id) }}"
+                                >
+                                   {{ student.name }}
+                                </a>
+                            </td>
 
                             <td>
                                 {{ student.phone or "未填写" }}

@@ -1,3 +1,4 @@
+
 import sqlite3
 from flask import Flask, render_template, request, redirect, url_for
 
@@ -31,10 +32,19 @@ def students():
 
         cursor.execute(
             """
-            INSERT INTO students (name, phone, birthday, school, grade, enrollment_date)
+            INSERT INTO students (
+                name, phone, birthday, school, grade, enrollment_date
+            )
             VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (name, phone, birthday or None, school or None, grade or None, enrollment_date or None)
+            (
+                name,
+                phone,
+                birthday or None,
+                school or None,
+                grade or None,
+                enrollment_date or None
+            )
         )
 
         connection.commit()
@@ -50,7 +60,8 @@ def students():
 
     cursor.execute(
         """
-        SELECT id, name, phone, birthday, school, grade, enrollment_date, status
+        SELECT id, name, phone, birthday, school, grade,
+               enrollment_date, status
         FROM students
         ORDER BY id DESC
         """
@@ -147,6 +158,81 @@ def assign_student(student_id):
     return redirect(url_for("students"))
 
 
+# Student Detail - View Profile and Class History
+@app.route("/students/<int:student_id>")
+def student_detail(student_id):
+
+    connection = sqlite3.connect("go_training.db")
+    connection.row_factory = sqlite3.Row
+
+    cursor = connection.cursor()
+
+    # Get student information
+    cursor.execute(
+        """
+        SELECT
+            id,
+            name,
+            phone,
+            birthday,
+            school,
+            grade,
+            enrollment_date,
+            status
+        FROM students
+        WHERE id = ?
+        """,
+        (student_id,)
+    )
+
+    student = cursor.fetchone()
+
+    if student is None:
+        connection.close()
+        return "Student not found", 404
+
+    # Get enrollment history
+    cursor.execute(
+        """
+        SELECT
+            enrollments.id,
+            classes.id AS class_id,
+            classes.name AS class_name,
+            enrollments.start_date,
+            enrollments.end_date,
+            enrollments.status,
+            enrollments.notes
+        FROM enrollments
+        JOIN classes
+            ON enrollments.class_id = classes.id
+        WHERE enrollments.student_id = ?
+        ORDER BY enrollments.id DESC
+        """,
+        (student_id,)
+    )
+
+    enrollment_history = cursor.fetchall()
+
+    connection.close()
+
+    # Get currently active classes
+    if student["status"] == "withdrawn":
+        current_classes = []
+    else:
+        current_classes = [
+            enrollment
+            for enrollment in enrollment_history
+            if enrollment["status"] == "active"
+        ]
+
+    return render_template(
+        "student_detail.html",
+        student=student,
+        current_classes=current_classes,
+        enrollment_history=enrollment_history
+    )
+
+
 # Edit Student Information
 @app.route("/students/<int:student_id>/edit", methods=["GET", "POST"])
 def edit_student(student_id):
@@ -172,10 +258,23 @@ def edit_student(student_id):
         cursor.execute(
             """
             UPDATE students
-            SET name = ?, phone = ?, birthday = ?, school = ?, grade = ?, enrollment_date = ?
+            SET name = ?,
+                phone = ?,
+                birthday = ?,
+                school = ?,
+                grade = ?,
+                enrollment_date = ?
             WHERE id = ?
             """,
-            (name, phone, birthday or None, school or None, grade or None, enrollment_date or None, student_id)
+            (
+                name,
+                phone,
+                birthday or None,
+                school or None,
+                grade or None,
+                enrollment_date or None,
+                student_id
+            )
         )
 
         connection.commit()
@@ -185,7 +284,18 @@ def edit_student(student_id):
 
     # Get student information
     cursor.execute(
-        "SELECT id, name, phone, birthday, school, grade, enrollment_date FROM students WHERE id = ?",
+        """
+        SELECT
+            id,
+            name,
+            phone,
+            birthday,
+            school,
+            grade,
+            enrollment_date
+        FROM students
+        WHERE id = ?
+        """,
         (student_id,)
     )
 
@@ -196,7 +306,10 @@ def edit_student(student_id):
     if student is None:
         return "Student not found", 404
 
-    return render_template("edit_student.html", student=student)
+    return render_template(
+        "edit_student.html",
+        student=student
+    )
 
 
 # Class Management - Add and View Classes
@@ -238,7 +351,10 @@ def classes():
 
     connection.close()
 
-    return render_template("classes.html", classes=class_list)
+    return render_template(
+        "classes.html",
+        classes=class_list
+    )
 
 
 # Student Enrollment
@@ -391,7 +507,9 @@ def leave_class(class_id, student_id):
     connection.commit()
     connection.close()
 
-    return redirect(url_for("class_detail", class_id=class_id))
+    return redirect(
+        url_for("class_detail", class_id=class_id)
+    )
 
 
 # Transfer a Student to Another Class
@@ -470,9 +588,12 @@ def transfer_student(class_id, student_id):
     finally:
         connection.close()
 
-    return redirect(url_for("class_detail", class_id=new_class_id))
+    return redirect(
+        url_for("class_detail", class_id=new_class_id)
+    )
 
-# Remove a student from a class on the student list
+
+# Remove a Student from a Class on the Student List
 @app.route(
     "/students/<int:student_id>/leave/<int:class_id>",
     methods=["POST"]
@@ -622,6 +743,7 @@ def update_student_status(student_id):
 
     return redirect(url_for("students"))
 
+
 # Edit Class Information
 @app.route("/classes/<int:class_id>/edit", methods=["GET", "POST"])
 def edit_class(class_id):
@@ -670,6 +792,7 @@ def edit_class(class_id):
         "edit_class.html",
         class_info=class_info
     )
+
 
 # Run the Flask Application
 if __name__ == "__main__":
