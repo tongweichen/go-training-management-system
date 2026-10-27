@@ -176,6 +176,13 @@
                     placeholder="例如：三年级"
                 >
 
+                <label for="enrollment_date">入学日期：</label>
+                <input
+                    type="date"
+                    id="enrollment_date"
+                    name="enrollment_date"
+                >
+
                 <button type="submit">
                     添加学生
                 </button>
@@ -198,6 +205,7 @@
                             <th>出生日期</th>
                             <th>学校</th>
                             <th>年级</th>
+                            <th>入学日期</th>
                             <th>当前状态</th>
                             <th>修改班级／状态</th>
                             <th>操作</th>
@@ -226,6 +234,10 @@
 
                             <td>
                                 {{ student.grade or "未填写" }}
+                            </td>
+
+                            <td>
+                                {{ student.enrollment_date or "未填写" }}
                             </td>
 
                             <td>

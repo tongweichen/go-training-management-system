@@ -107,6 +107,14 @@
                     placeholder="例如：三年级"
                 >
 
+                <label for="enrollment_date">入学日期：</label>
+                <input
+                    type="date"
+                    id="enrollment_date"
+                    name="enrollment_date"
+                    value="{{ student.enrollment_date or '' }}"
+                >
+
                 <button type="submit">保存修改</button>
             </form>
         </div>

@@ -19,6 +19,9 @@ def students():
         name = request.form.get("name", "").strip()
         phone = request.form.get("phone", "").strip()
         birthday = request.form.get("birthday", "").strip()
+        school = request.form.get("school", "").strip()
+        grade = request.form.get("grade", "").strip()
+        enrollment_date = request.form.get("enrollment_date", "").strip()
 
         if not name:
             return "Student name is required", 400
@@ -27,8 +30,11 @@ def students():
         cursor = connection.cursor()
 
         cursor.execute(
-            "INSERT INTO students (name, phone, birthday) VALUES (?, ?, ?)",
-            (name, phone, birthday or None)
+            """
+            INSERT INTO students (name, phone, birthday, school, grade, enrollment_date)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (name, phone, birthday or None, school or None, grade or None, enrollment_date or None)
         )
 
         connection.commit()
@@ -44,7 +50,7 @@ def students():
 
     cursor.execute(
         """
-        SELECT id, name, phone, birthday, status
+        SELECT id, name, phone, birthday, school, grade, enrollment_date, status
         FROM students
         ORDER BY id DESC
         """
@@ -155,14 +161,21 @@ def edit_student(student_id):
         name = request.form.get("name", "").strip()
         phone = request.form.get("phone", "").strip()
         birthday = request.form.get("birthday", "").strip()
+        school = request.form.get("school", "").strip()
+        grade = request.form.get("grade", "").strip()
+        enrollment_date = request.form.get("enrollment_date", "").strip()
 
         if not name:
             connection.close()
             return "Student name is required", 400
 
         cursor.execute(
-            "UPDATE students SET name = ?, phone = ?, birthday = ? WHERE id = ?",
-            (name, phone, birthday or None, student_id)
+            """
+            UPDATE students
+            SET name = ?, phone = ?, birthday = ?, school = ?, grade = ?, enrollment_date = ?
+            WHERE id = ?
+            """,
+            (name, phone, birthday or None, school or None, grade or None, enrollment_date or None, student_id)
         )
 
         connection.commit()
@@ -172,7 +185,7 @@ def edit_student(student_id):
 
     # Get student information
     cursor.execute(
-        "SELECT id, name, phone, birthday FROM students WHERE id = ?",
+        "SELECT id, name, phone, birthday, school, grade, enrollment_date FROM students WHERE id = ?",
         (student_id,)
     )
 
