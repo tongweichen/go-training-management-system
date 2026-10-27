@@ -202,12 +202,7 @@
                             <th>编号</th>
                             <th>姓名</th>
                             <th>联系电话</th>
-                            <th>出生日期</th>
-                            <th>学校</th>
-                            <th>年级</th>
-                            <th>入学日期</th>
                             <th>当前状态</th>
-                            <th>修改班级／状态</th>
                             <th>操作</th>
                         </tr>
                     </thead>
@@ -229,22 +224,6 @@
 
                             <td>
                                 {{ student.phone or "未填写" }}
-                            </td>
-
-                            <td>
-                                {{ student.birthday or "未填写" }}
-                            </td>
-
-                            <td>
-                                {{ student.school or "未填写" }}
-                            </td>
-
-                            <td>
-                                {{ student.grade or "未填写" }}
-                            </td>
-
-                            <td>
-                                {{ student.enrollment_date or "未填写" }}
                             </td>
 
                             <td>
@@ -307,9 +286,7 @@
                                         保存
                                     </button>
                                 </form>
-                            </td>
 
-                            <td>
                                 <a
                                     class="edit-link"
                                     href="{{ url_for('edit_student', student_id=student.id) }}"
