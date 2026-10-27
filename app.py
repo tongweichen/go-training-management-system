@@ -1,4 +1,6 @@
 import sqlite3
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal, InvalidOperation
 from flask import Flask, render_template, request, redirect, url_for
 
 app = Flask(__name__)
@@ -797,6 +799,226 @@ def edit_class(class_id):
         class_info=class_info
     )
 
+
+# Convert stored units to lesson hours
+def format_lesson_units(units):
+    value = Decimal(units) / Decimal(1000)
+    return format(value, "f").rstrip("0").rstrip(".") or "0"
+
+
+# Student Lesson Balance and History
+@app.route("/students/<int:student_id>/balance", methods=["GET", "POST"])
+def student_balance(student_id):
+
+    connection = sqlite3.connect("go_training.db")
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
+
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+
+        # Check student
+        student = connection.execute(
+            "SELECT id, name FROM students WHERE id = ?",
+            (student_id,)
+        ).fetchone()
+
+        if student is None:
+            connection.rollback()
+            return "Student not found", 404
+
+        # Create an account if the student does not have one
+        connection.execute(
+            """
+            INSERT OR IGNORE INTO student_balances
+                (student_id, balance_units)
+            VALUES (?, 0)
+            """,
+            (student_id,)
+        )
+
+        # Update balance manually
+        if request.method == "POST":
+
+            balance_text = request.form.get("balance", "").strip()
+            notes = request.form.get("notes", "").strip()
+
+            try:
+                new_balance = Decimal(balance_text)
+
+                if not new_balance.is_finite():
+                    raise ValueError
+
+                if new_balance < 0:
+                    raise ValueError
+
+                new_units_decimal = new_balance * 1000
+
+                if new_units_decimal != new_units_decimal.to_integral_value():
+                    raise ValueError
+
+                new_units = int(new_units_decimal)
+
+                if new_units > 9223372036854775807:
+                    raise ValueError
+
+            except (InvalidOperation, ValueError):
+                connection.rollback()
+                return "Please enter a valid non-negative balance (up to 3 decimal places)", 400
+
+            account = connection.execute(
+                """
+                SELECT balance_units
+                FROM student_balances
+                WHERE student_id = ?
+                """,
+                (student_id,)
+            ).fetchone()
+
+            old_units = account["balance_units"]
+            change_units = new_units - old_units
+
+            if change_units != 0:
+
+                # Update balance
+                connection.execute(
+                    """
+                    UPDATE student_balances
+                    SET balance_units = ?
+                    WHERE student_id = ?
+                    """,
+                    (new_units, student_id)
+                )
+
+                # China local time (UTC+8)
+                china_time = timezone(timedelta(hours=8))
+                created_at = datetime.now(china_time).isoformat(
+                    timespec="seconds"
+                )
+
+                # Save change history
+                connection.execute(
+                    """
+                    INSERT INTO lesson_transactions (
+                        student_id,
+                        change_units,
+                        balance_before,
+                        balance_after,
+                        transaction_type,
+                        notes,
+                        created_at
+                    )
+                    VALUES (?, ?, ?, ?, 'manual', ?, ?)
+                    """,
+                    (
+                        student_id,
+                        change_units,
+                        old_units,
+                        new_units,
+                        notes or None,
+                        created_at
+                    )
+                )
+
+            connection.commit()
+
+            return redirect(
+                url_for("student_balance", student_id=student_id)
+            )
+
+        # Read current balance
+        account = connection.execute(
+            """
+            SELECT balance_units
+            FROM student_balances
+            WHERE student_id = ?
+            """,
+            (student_id,)
+        ).fetchone()
+
+        # Read all balance changes
+        transactions = connection.execute(
+            """
+            SELECT
+                id,
+                change_units,
+                balance_before,
+                balance_after,
+                transaction_type,
+                notes,
+                created_at
+            FROM lesson_transactions
+            WHERE student_id = ?
+            ORDER BY id DESC
+            """,
+            (student_id,)
+        ).fetchall()
+
+        connection.commit()
+
+        history = []
+
+        for item in transactions:
+            change = format_lesson_units(item["change_units"])
+
+            if item["change_units"] > 0:
+                change = "+" + change
+
+            history.append({
+                "id": item["id"],
+                "change": change,
+                "before": format_lesson_units(item["balance_before"]),
+                "after": format_lesson_units(item["balance_after"]),
+                "type": item["transaction_type"],
+                "notes": item["notes"],
+                "created_at": item["created_at"]
+            })
+
+        return render_template(
+            "student_balance.html",
+            student=student,
+            balance=format_lesson_units(account["balance_units"]),
+            history=history
+        )
+
+    except sqlite3.Error:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# Lesson Management Overview
+@app.route("/lesson-management")
+def lesson_management():
+
+    connection = sqlite3.connect("go_training.db")
+    connection.row_factory = sqlite3.Row
+
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT
+            students.id,
+            students.name,
+            students.status,
+            student_balances.balance_units
+        FROM students
+        LEFT JOIN student_balances
+            ON students.id = student_balances.student_id
+        ORDER BY students.id DESC
+    """)
+
+    student_list = cursor.fetchall()
+
+    connection.close()
+
+    return render_template(
+        "lesson_management.html",
+        students=student_list,
+        format_lesson_units=format_lesson_units
+    )
 
 # Run the Flask Application
 if __name__ == "__main__":

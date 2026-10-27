@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生课时管理</title>
+
+    <style>
+        body {
+            background-color: #f0f4f8;
+            font-family: "Microsoft YaHei", sans-serif;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .card {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        h1, h2 {
+            color: #2c3e50;
+        }
+
+        .balance-number {
+            font-size: 36px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 15px 0;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0 20px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        button {
+            background-color: #2c3e50;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #1a252f;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f0f4f8;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .back-link {
+            color: #2c3e50;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .notes-cell {
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <h1>{{ student.name }} - 课时管理</h1>
+
+        <!-- Current Balance -->
+        <div class="card">
+            <h2>剩余课时</h2>
+
+            <div class="balance-number">
+                {{ balance }} 课时
+            </div>
+        </div>
+
+        <!-- Manual Balance Update -->
+        <div class="card">
+            <h2>修改课时余额</h2>
+
+            <form method="POST">
+
+                <label for="balance">新的课时余额：</label>
+                <input
+                    type="number"
+                    id="balance"
+                    name="balance"
+                    min="0"
+                    step="0.001"
+                    value="{{ balance }}"
+                    required
+                >
+
+                <label for="notes">修改原因（选填）：</label>
+                <textarea
+                    id="notes"
+                    name="notes"
+                    rows="3"
+                    placeholder="例如：补录之前购买的课时"
+                ></textarea>
+
+                <button type="submit">
+                    保存课时
+                </button>
+            </form>
+        </div>
+
+        <!-- Balance History -->
+        <div class="card">
+            <h2>课时变动记录</h2>
+
+            {% if history %}
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>操作时间</th>
+                            <th>类型</th>
+                            <th>变化课时</th>
+                            <th>修改前</th>
+                            <th>修改后</th>
+                            <th>备注</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for item in history %}
+                        <tr>
+                            <td>{{ item.created_at }}</td>
+
+                            <td>
+                                {% if item.type == "manual" %}
+                                    手动调整
+                                {% elif item.type == "lesson" %}
+                                    上课扣除
+                                {% elif item.type == "payment" %}
+                                    课时充值
+                                {% else %}
+                                    {{ item.type }}
+                                {% endif %}
+                            </td>
+
+                            <td>{{ item.change }}</td>
+
+                            <td>{{ item.before }}</td>
+
+                            <td>{{ item.after }}</td>
+
+                            <td class="notes-cell">
+                                {{ item.notes or "—" }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% else %}
+
+                <p>暂无课时变动记录</p>
+
+            {% endif %}
+        </div>
+
+        <a
+            class="back-link"
+            href="{{ url_for('student_detail', student_id=student.id) }}"
+        >
+            ← 返回学生详情
+        </a>
+
+    </div>
+</body>
+</html>
