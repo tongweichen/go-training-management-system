@@ -1,4 +1,3 @@
-
 import sqlite3
 from flask import Flask, render_template, request, redirect, url_for
 
@@ -178,6 +177,7 @@ def student_detail(student_id):
             school,
             grade,
             enrollment_date,
+            notes,
             status
         FROM students
         WHERE id = ?
@@ -250,6 +250,7 @@ def edit_student(student_id):
         school = request.form.get("school", "").strip()
         grade = request.form.get("grade", "").strip()
         enrollment_date = request.form.get("enrollment_date", "").strip()
+        notes = request.form.get("notes", "").strip()
 
         if not name:
             connection.close()
@@ -263,7 +264,8 @@ def edit_student(student_id):
                 birthday = ?,
                 school = ?,
                 grade = ?,
-                enrollment_date = ?
+                enrollment_date = ?,
+                notes = ?
             WHERE id = ?
             """,
             (
@@ -273,6 +275,7 @@ def edit_student(student_id):
                 school or None,
                 grade or None,
                 enrollment_date or None,
+                notes or None,
                 student_id
             )
         )
@@ -292,7 +295,8 @@ def edit_student(student_id):
             birthday,
             school,
             grade,
-            enrollment_date
+            enrollment_date,
+            notes
         FROM students
         WHERE id = ?
         """,

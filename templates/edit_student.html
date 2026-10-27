@@ -37,6 +37,15 @@
             box-sizing: border-box;
         }
 
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0 20px;
+            box-sizing: border-box;
+            font-family: inherit;
+            resize: vertical;
+        }
+
         button {
             background-color: #2c3e50;
             color: white;
@@ -114,6 +123,14 @@
                     name="enrollment_date"
                     value="{{ student.enrollment_date or '' }}"
                 >
+
+                <label for="notes">学生备注：</label>
+                <textarea
+                    id="notes"
+                    name="notes"
+                    rows="4"
+                    placeholder="例如：学习情况、家长要求等"
+                >{{ student.notes or '' }}</textarea>
 
                 <button type="submit">保存修改</button>
             </form>

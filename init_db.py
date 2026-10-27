@@ -1,3 +1,4 @@
+
 import sqlite3
 
 connection = sqlite3.connect("go_training.db")
@@ -17,6 +18,7 @@ CREATE TABLE IF NOT EXISTS students (
     school TEXT,
     grade TEXT,
     enrollment_date TEXT,
+    notes TEXT,
     status TEXT NOT NULL DEFAULT 'active',
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 )

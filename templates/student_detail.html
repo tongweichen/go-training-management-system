@@ -109,6 +109,11 @@
         .empty-message {
             color: #777;
         }
+
+        .student-notes {
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
     </style>
 </head>
 
@@ -154,6 +159,11 @@
             <div class="info-row">
                 <span class="info-label">入学日期：</span>
                 {{ student.enrollment_date or "未填写" }}
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">学生备注：</span>
+                <span class="student-notes">{{ student.notes or "未填写" }}</span>
             </div>
 
             <a
