@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -162,6 +161,21 @@
                     name="birthday"
                 >
 
+                <label for="school">学校：</label>
+                <input
+                    type="text"
+                    id="school"
+                    name="school"
+                >
+
+                <label for="grade">年级：</label>
+                <input
+                    type="text"
+                    id="grade"
+                    name="grade"
+                    placeholder="例如：三年级"
+                >
+
                 <button type="submit">
                     添加学生
                 </button>
@@ -182,6 +196,8 @@
                             <th>姓名</th>
                             <th>联系电话</th>
                             <th>出生日期</th>
+                            <th>学校</th>
+                            <th>年级</th>
                             <th>当前状态</th>
                             <th>修改班级／状态</th>
                             <th>操作</th>
@@ -202,6 +218,14 @@
 
                             <td>
                                 {{ student.birthday or "未填写" }}
+                            </td>
+
+                            <td>
+                                {{ student.school or "未填写" }}
+                            </td>
+
+                            <td>
+                                {{ student.grade or "未填写" }}
                             </td>
 
                             <td>

@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS students (
     name TEXT NOT NULL,
     phone TEXT,
     birthday TEXT,
+    school TEXT,
+    grade TEXT,
     status TEXT NOT NULL DEFAULT 'active',
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 )
