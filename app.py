@@ -1020,6 +1020,94 @@ def lesson_management():
         format_lesson_units=format_lesson_units
     )
 
+
+# Attendance Records - Add and View Lessons
+@app.route("/attendance", methods=["GET", "POST"])
+def attendance():
+
+    connection = sqlite3.connect("go_training.db")
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
+    cursor = connection.cursor()
+
+    if request.method == "POST":
+        student_id = request.form.get("student_id", type=int)
+        class_id = request.form.get("class_id", type=int)
+        lesson_date = request.form.get("lesson_date", "").strip()
+        start_time = request.form.get("start_time", "").strip()
+        end_time = request.form.get("end_time", "").strip()
+        notes = request.form.get("notes", "").strip()
+
+        try:
+            lesson_day = datetime.strptime(lesson_date, "%Y-%m-%d").date()
+            start = datetime.strptime(start_time, "%H:%M").time()
+            end = datetime.strptime(end_time, "%H:%M").time()
+        except ValueError:
+            connection.close()
+            return "Please enter a valid date and time", 400
+
+        if student_id is None or start >= end:
+            connection.close()
+            return "Please select a student and ensure the end time is later", 400
+
+        student_exists = cursor.execute(
+            "SELECT 1 FROM students WHERE id = ?", (student_id,)
+        ).fetchone()
+        if student_exists is None:
+            connection.close()
+            return "Student not found", 404
+
+        if class_id is not None:
+            class_exists = cursor.execute(
+                "SELECT 1 FROM classes WHERE id = ?", (class_id,)
+            ).fetchone()
+            if class_exists is None:
+                connection.close()
+                return "Class not found", 404
+
+        cursor.execute(
+            """
+            INSERT INTO attendance
+                (student_id, class_id, lesson_date, start_time, end_time, notes)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                student_id,
+                class_id,
+                lesson_day.isoformat(),
+                start.strftime("%H:%M"),
+                end.strftime("%H:%M"),
+                notes or None
+            )
+        )
+        connection.commit()
+        connection.close()
+        return redirect(url_for("attendance"))
+
+    students = cursor.execute(
+        "SELECT id, name FROM students ORDER BY id DESC"
+    ).fetchall()
+    classes = cursor.execute(
+        "SELECT id, name FROM classes ORDER BY name"
+    ).fetchall()
+    records = cursor.execute(
+        """
+        SELECT attendance.id, students.name AS student_name,
+               classes.name AS class_name, attendance.lesson_date,
+               attendance.start_time, attendance.end_time, attendance.notes
+        FROM attendance
+        JOIN students ON attendance.student_id = students.id
+        LEFT JOIN classes ON attendance.class_id = classes.id
+        ORDER BY attendance.lesson_date DESC,
+                 attendance.start_time DESC, attendance.id DESC
+        """
+    ).fetchall()
+    connection.close()
+
+    return render_template(
+        "attendance.html", students=students, classes=classes, records=records
+    )
+
 # Run the Flask Application
 if __name__ == "__main__":
     app.run(debug=True)
