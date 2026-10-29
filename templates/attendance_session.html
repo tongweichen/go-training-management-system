@@ -1,0 +1,199 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>班级签到</title>
+
+    <style>
+        body {
+            background-color: #f0f4f8;
+            font-family: "Microsoft YaHei", sans-serif;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        h1, h2 {
+            color: #2c3e50;
+        }
+
+        .card {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .session-info {
+            color: #555;
+            line-height: 1.8;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f0f4f8;
+        }
+
+        select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-family: inherit;
+        }
+
+        button {
+            background-color: #2c3e50;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #1a252f;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 15px;
+            color: #2c3e50;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .guest-label {
+            color: #888;
+            font-size: 13px;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .empty-message {
+            color: #777;
+        }
+
+        @media (max-width: 600px) {
+            th, td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <h1>班级签到</h1>
+
+        <div class="card">
+            <h2>{{ session.class_name }}</h2>
+
+            <div class="session-info">
+                <p>上课日期：{{ session.lesson_date }}</p>
+                <p>上课时间：{{ session.start_time }} - {{ session.end_time }}</p>
+
+                {% if session.notes %}
+                <p>备注：{{ session.notes }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>学生签到名单</h2>
+
+            {% if attendance_list %}
+
+            <form method="POST" action="{{ url_for('attendance_session', session_id=session.id) }}">
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>学生</th>
+                                <th>出勤状态</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for record in attendance_list %}
+                            <tr>
+                                <td>
+                                    {{ record.student_name }}
+
+                                    {% if record.is_guest %}
+                                    <span class="guest-label">（临时上课）</span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    <select name="status_{{ record.id }}">
+                                        <option value="present"
+                                            {% if record.status == 'present' %}selected{% endif %}>
+                                            出勤
+                                        </option>
+
+                                        <option value="late"
+                                            {% if record.status == 'late' %}selected{% endif %}>
+                                            迟到
+                                        </option>
+
+                                        <option value="leave"
+                                            {% if record.status == 'leave' %}selected{% endif %}>
+                                            请假
+                                        </option>
+
+                                        <option value="absent"
+                                            {% if record.status == 'absent' %}selected{% endif %}>
+                                            缺勤
+                                        </option>
+                                    </select>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>
+                    <button type="submit">保存签到</button>
+                </p>
+
+            </form>
+
+            {% else %}
+
+            <p class="empty-message">本次课程暂无学生，请先确认班级中是否有在读学生。</p>
+
+            {% endif %}
+        </div>
+
+        <a class="back-link" href="{{ url_for('new_attendance_session') }}">
+            ← 返回新建上课场次
+        </a>
+
+    </div>
+</body>
+</html>

@@ -1,0 +1,179 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上课记录</title>
+
+    <style>
+        body {
+            background-color: #f0f4f8;
+            font-family: "Microsoft YaHei", sans-serif;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        h1, h2 {
+            color: #2c3e50;
+        }
+
+        .card {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 10px 15px;
+            background-color: #2c3e50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .button:hover {
+            background-color: #1a252f;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f0f4f8;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .view-link {
+            color: #2c3e50;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .view-link:hover {
+            text-decoration: underline;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 15px;
+            color: #2c3e50;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .empty-message {
+            color: #777;
+        }
+
+        @media (max-width: 600px) {
+            th, td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <h1>上课记录</h1>
+
+        <div class="card">
+            <h2>班级考勤管理</h2>
+            <p>查看历史上课记录，或者为班级创建新的签到场次。</p>
+
+            <a class="button" href="{{ url_for('new_attendance_session') }}">
+                + 新建上课场次
+            </a>
+        </div>
+
+        <div class="card">
+            <h2>历史上课记录</h2>
+
+            {% if sessions %}
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>上课日期</th>
+                            <th>班级</th>
+                            <th>上课时间</th>
+                            <th>出勤</th>
+                            <th>迟到</th>
+                            <th>请假</th>
+                            <th>缺勤</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for session in sessions %}
+                        <tr>
+                            <td>{{ session.lesson_date }}</td>
+
+                            <td>{{ session.class_name }}</td>
+
+                            <td>
+                                {{ session.start_time }} - {{ session.end_time }}
+                            </td>
+
+                            <td>{{ session.present_count }}</td>
+
+                            <td>{{ session.late_count }}</td>
+
+                            <td>{{ session.leave_count }}</td>
+
+                            <td>{{ session.absent_count }}</td>
+
+                            <td>
+                                <a
+                                    class="view-link"
+                                    href="{{ url_for('attendance_session', session_id=session.id) }}"
+                                >
+                                    查看 / 修改
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% else %}
+
+            <p class="empty-message">暂无上课记录，可以先创建一个上课场次。</p>
+
+            {% endif %}
+        </div>
+
+        <a class="back-link" href="{{ url_for('home') }}">
+            ← 返回首页
+        </a>
+
+    </div>
+</body>
+</html>

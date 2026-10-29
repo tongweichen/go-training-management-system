@@ -1021,91 +1021,303 @@ def lesson_management():
     )
 
 
-# Attendance Records - Add and View Lessons
-@app.route("/attendance", methods=["GET", "POST"])
+
+# Attendance Overview
+@app.route("/attendance")
 def attendance():
 
     connection = sqlite3.connect("go_training.db")
     connection.row_factory = sqlite3.Row
+
+    cursor = connection.cursor()
+
+    # Get all class sessions and attendance statistics
+    cursor.execute(
+        """
+        SELECT
+            class_sessions.id,
+            class_sessions.lesson_date,
+            class_sessions.start_time,
+            class_sessions.end_time,
+            classes.name AS class_name,
+            COUNT(attendance_entries.id) AS total_students,
+            SUM(CASE WHEN attendance_entries.status = 'present'
+                THEN 1 ELSE 0 END) AS present_count,
+            SUM(CASE WHEN attendance_entries.status = 'late'
+                THEN 1 ELSE 0 END) AS late_count,
+            SUM(CASE WHEN attendance_entries.status = 'leave'
+                THEN 1 ELSE 0 END) AS leave_count,
+            SUM(CASE WHEN attendance_entries.status = 'absent'
+                THEN 1 ELSE 0 END) AS absent_count
+        FROM class_sessions
+        JOIN classes
+            ON class_sessions.class_id = classes.id
+        LEFT JOIN attendance_entries
+            ON class_sessions.id = attendance_entries.session_id
+        GROUP BY class_sessions.id
+        ORDER BY class_sessions.lesson_date DESC,
+                 class_sessions.start_time DESC,
+                 class_sessions.id DESC
+        """
+    )
+
+    sessions = cursor.fetchall()
+
+    connection.close()
+
+    return render_template(
+        "attendance.html",
+        sessions=sessions
+    )
+
+# Create a Class Session
+@app.route("/attendance/sessions/new", methods=["GET", "POST"])
+def new_attendance_session():
+
+    connection = sqlite3.connect("go_training.db")
+    connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
+
     cursor = connection.cursor()
 
     if request.method == "POST":
-        student_id = request.form.get("student_id", type=int)
         class_id = request.form.get("class_id", type=int)
         lesson_date = request.form.get("lesson_date", "").strip()
         start_time = request.form.get("start_time", "").strip()
         end_time = request.form.get("end_time", "").strip()
         notes = request.form.get("notes", "").strip()
 
+        if class_id is None:
+            connection.close()
+            return "Please select a class", 400
+
         try:
-            lesson_day = datetime.strptime(lesson_date, "%Y-%m-%d").date()
-            start = datetime.strptime(start_time, "%H:%M").time()
-            end = datetime.strptime(end_time, "%H:%M").time()
+            lesson_day = datetime.strptime(
+                lesson_date, "%Y-%m-%d"
+            ).date()
+
+            start = datetime.strptime(
+                start_time, "%H:%M"
+            ).time()
+
+            end = datetime.strptime(
+                end_time, "%H:%M"
+            ).time()
+
         except ValueError:
             connection.close()
             return "Please enter a valid date and time", 400
 
-        if student_id is None or start >= end:
+        if start >= end:
             connection.close()
-            return "Please select a student and ensure the end time is later", 400
+            return "End time must be later than start time", 400
 
-        student_exists = cursor.execute(
-            "SELECT 1 FROM students WHERE id = ?", (student_id,)
+        class_info = cursor.execute(
+            "SELECT id FROM classes WHERE id = ?",
+            (class_id,)
         ).fetchone()
-        if student_exists is None:
+
+        if class_info is None:
             connection.close()
-            return "Student not found", 404
+            return "Class not found", 404
 
-        if class_id is not None:
-            class_exists = cursor.execute(
-                "SELECT 1 FROM classes WHERE id = ?", (class_id,)
-            ).fetchone()
-            if class_exists is None:
-                connection.close()
-                return "Class not found", 404
-
-        cursor.execute(
-            """
-            INSERT INTO attendance
-                (student_id, class_id, lesson_date, start_time, end_time, notes)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (
-                student_id,
-                class_id,
-                lesson_day.isoformat(),
-                start.strftime("%H:%M"),
-                end.strftime("%H:%M"),
-                notes or None
+        try:
+            cursor.execute(
+                """
+                INSERT INTO class_sessions
+                    (class_id, lesson_date, start_time, end_time, notes)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    class_id,
+                    lesson_day.isoformat(),
+                    start.strftime("%H:%M"),
+                    end.strftime("%H:%M"),
+                    notes or None
+                )
             )
-        )
-        connection.commit()
-        connection.close()
-        return redirect(url_for("attendance"))
 
-    students = cursor.execute(
-        "SELECT id, name FROM students ORDER BY id DESC"
-    ).fetchall()
+            session_id = cursor.lastrowid
+
+            # Automatically add students from this class
+            cursor.execute(
+                """
+                INSERT INTO attendance_entries
+                    (session_id, student_id, status, is_guest)
+                SELECT ?, students.id, 'present', 0
+                FROM students
+                JOIN enrollments
+                    ON students.id = enrollments.student_id
+                WHERE enrollments.class_id = ?
+                  AND enrollments.status = 'active'
+                  AND students.status = 'active'
+                """,
+                (session_id, class_id)
+            )
+
+            connection.commit()
+
+        except sqlite3.IntegrityError:
+            connection.rollback()
+            connection.close()
+            return "This class session already exists", 400
+
+        connection.close()
+
+        return redirect(
+            url_for("attendance_session", session_id=session_id)
+        )
+
     classes = cursor.execute(
         "SELECT id, name FROM classes ORDER BY name"
     ).fetchall()
-    records = cursor.execute(
-        """
-        SELECT attendance.id, students.name AS student_name,
-               classes.name AS class_name, attendance.lesson_date,
-               attendance.start_time, attendance.end_time, attendance.notes
-        FROM attendance
-        JOIN students ON attendance.student_id = students.id
-        LEFT JOIN classes ON attendance.class_id = classes.id
-        ORDER BY attendance.lesson_date DESC,
-                 attendance.start_time DESC, attendance.id DESC
-        """
-    ).fetchall()
+
     connection.close()
 
     return render_template(
-        "attendance.html", students=students, classes=classes, records=records
+        "new_attendance_session.html",
+        classes=classes
+    )
+
+
+# Take Attendance for a Class Session
+@app.route("/attendance/sessions/<int:session_id>", methods=["GET", "POST"])
+def attendance_session(session_id):
+
+    connection = sqlite3.connect("go_training.db")
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
+
+    cursor = connection.cursor()
+
+    # Get session information
+    session = cursor.execute(
+        """
+        SELECT
+            class_sessions.id,
+            class_sessions.class_id,
+            class_sessions.lesson_date,
+            class_sessions.start_time,
+            class_sessions.end_time,
+            class_sessions.notes,
+            classes.name AS class_name
+        FROM class_sessions
+        JOIN classes
+            ON class_sessions.class_id = classes.id
+        WHERE class_sessions.id = ?
+        """,
+        (session_id,)
+    ).fetchone()
+
+    if session is None:
+        connection.close()
+        return "Class session not found", 404
+
+    # Save attendance
+    if request.method == "POST":
+
+        allowed_statuses = ("present", "late", "leave", "absent")
+
+        records = cursor.execute(
+            """
+            SELECT id
+            FROM attendance_entries
+            WHERE session_id = ?
+            """,
+            (session_id,)
+        ).fetchall()
+
+        # Check every submitted status before saving
+        updates = []
+
+        for record in records:
+            status = request.form.get(
+                f"status_{record['id']}"
+            )
+
+            if status not in allowed_statuses:
+                connection.close()
+                return "Invalid attendance status", 400
+
+            updates.append((record["id"], status))
+
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+
+            for attendance_id, new_status in updates:
+
+                old_record = cursor.execute(
+                    """
+                    SELECT status
+                    FROM attendance_entries
+                    WHERE id = ? AND session_id = ?
+                    """,
+                    (attendance_id, session_id)
+                ).fetchone()
+
+                if old_record is None:
+                    connection.rollback()
+                    return "Attendance record not found", 404
+
+                old_status = old_record["status"]
+
+                if old_status != new_status:
+
+                    cursor.execute(
+                        """
+                        UPDATE attendance_entries
+                        SET status = ?
+                        WHERE id = ?
+                        """,
+                        (new_status, attendance_id)
+                    )
+
+                    cursor.execute(
+                        """
+                        INSERT INTO attendance_audit
+                            (attendance_id, old_status, new_status)
+                        VALUES (?, ?, ?)
+                        """,
+                        (attendance_id, old_status, new_status)
+                    )
+
+            connection.commit()
+
+        except sqlite3.Error:
+            connection.rollback()
+            raise
+
+        finally:
+            connection.close()
+
+        return redirect(
+            url_for("attendance_session", session_id=session_id)
+        )
+
+    # Get all students for this session
+    attendance_list = cursor.execute(
+        """
+        SELECT
+            attendance_entries.id,
+            attendance_entries.student_id,
+            attendance_entries.status,
+            attendance_entries.is_guest,
+            students.name AS student_name
+        FROM attendance_entries
+        JOIN students
+            ON attendance_entries.student_id = students.id
+        WHERE attendance_entries.session_id = ?
+        ORDER BY attendance_entries.is_guest, students.name
+        """,
+        (session_id,)
+    ).fetchall()
+
+    connection.close()
+
+    return render_template(
+        "attendance_session.html",
+        session=session,
+        attendance_list=attendance_list
     )
 
 # Run the Flask Application
