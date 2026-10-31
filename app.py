@@ -1320,6 +1320,131 @@ def attendance_session(session_id):
         attendance_list=attendance_list
     )
 
+# Add a Guest Student to a Class Session
+@app.route("/attendance/sessions/<int:session_id>/add-guest", methods=["POST"])
+def add_guest_student(session_id):
+
+    student_id = request.form.get("student_id", type=int)
+
+    if student_id is None:
+        return "Please select a student", 400
+
+    connection = sqlite3.connect("go_training.db")
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
+
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+
+        session = connection.execute(
+            "SELECT id, class_id FROM class_sessions WHERE id = ?",
+            (session_id,)
+        ).fetchone()
+
+        if session is None:
+            connection.rollback()
+            return "Class session not found", 404
+
+        student = connection.execute(
+            "SELECT id, status FROM students WHERE id = ?",
+            (student_id,)
+        ).fetchone()
+
+        if student is None:
+            connection.rollback()
+            return "Student not found", 404
+
+        if student["status"] == "withdrawn":
+            connection.rollback()
+            return "Withdrawn students cannot be added", 400
+
+        existing = connection.execute(
+            """
+            SELECT id
+            FROM attendance_entries
+            WHERE session_id = ? AND student_id = ?
+            """,
+            (session_id, student_id)
+        ).fetchone()
+
+        if existing is not None:
+            connection.rollback()
+            return "Student is already in this session", 400
+
+        connection.execute(
+            """
+            INSERT INTO attendance_entries
+                (session_id, student_id, status, is_guest)
+            VALUES (?, ?, 'present', 1)
+            """,
+            (session_id, student_id)
+        )
+
+        connection.commit()
+
+    except sqlite3.IntegrityError:
+        connection.rollback()
+        return "Student is already in this session", 400
+
+    finally:
+        connection.close()
+
+    return redirect(
+        url_for("attendance_session", session_id=session_id)
+    )
+
+# Remove a Guest Student from a Class Session
+@app.route("/attendance/sessions/<int:session_id>/remove-guest/<int:student_id>", methods=["POST"])
+def remove_guest_student(session_id, student_id):
+
+    connection = sqlite3.connect("go_training.db")
+    connection.execute("PRAGMA foreign_keys = ON")
+
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+
+        record = connection.execute(
+            """
+            SELECT id
+            FROM attendance_entries
+            WHERE session_id = ?
+              AND student_id = ?
+              AND is_guest = 1
+            """,
+            (session_id, student_id)
+        ).fetchone()
+
+        if record is None:
+            connection.rollback()
+            return "Guest attendance record not found", 404
+
+        connection.execute(
+            "DELETE FROM attendance_audit WHERE attendance_id = ?",
+            (record[0],)
+        )
+
+        connection.execute(
+            """
+            DELETE FROM attendance_entries
+            WHERE id = ?
+              AND is_guest = 1
+            """,
+            (record[0],)
+        )
+
+        connection.commit()
+
+    except sqlite3.Error:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+    return redirect(
+        url_for("attendance_session", session_id=session_id)
+    )
+
 # Run the Flask Application
 if __name__ == "__main__":
     app.run(debug=True)
